@@ -16,24 +16,12 @@ from google.colab import files
 uploaded = files.upload()
 
 data=pd.read_csv('Campaign-Data.csv')
-data.columns
-
-data.head(n=5)
 
 data['Calendardate']=pd.to_datetime(data['Calendardate'])
 data['Calendar_month']=data['Calendardate'].dt.month
 data['Calendar_year']=data['Calendardate'].dt.year
 
-data['Client Type'].value_counts()
-
-pd.crosstab(data['Client Type'],data['Number of Competition'],margins=True)
-
-data.groupby('Client Type').mean()
-
-data.groupby('Number of Competition').mean()
-
-data.corr()[['Amount Collected']]
-
+#Correlation Analysis: Amount Collected vs. Different Marketing Channels
 cm = sns.light_palette("Yellow", as_cmap=True)
 correlation_analysis=pd.DataFrame(data[['Amount Collected',
                                         'Campaign (Email)', 
@@ -49,6 +37,7 @@ correlation_analysis=correlation_analysis[correlation_analysis['Marketing Channe
 correlation_analysis=correlation_analysis.sort_values('Correlation',ascending=False)
 correlation_analysis.style.background_gradient(cmap=cm).set_precision(3)
 
+#Correlation Analysis: Amount Collected vs. Different Marketing Channels (Broken by account type)
 cm = sns.light_palette("Yellow", as_cmap=True)
 correlation_analysis=pd.DataFrame(data.groupby('Client Type')[['Amount Collected',
                                                               'Campaign (Email)', 
@@ -64,35 +53,7 @@ correlation_analysis.columns=['Client Type','Marketing Channels','Correlation']
 correlation_analysis=correlation_analysis[correlation_analysis['Marketing Channels']!='Amount Collected']
 correlation_analysis.style.background_gradient(cmap=cm).set_precision(3)
 
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-data.columns=[mystring.replace(" ","_") for mystring in data.columns]
-data.columns=[mystring.replace("(","") for mystring in data.columns]
-data.columns=[mystring.replace(")","") for mystring in data.columns]
-results = smf.ols('Amount_Collected ~ Campaign_Email + Campaign_Flyer + Campaign_Phone + Sales_Contact_1 + Sales_Contact_2 + Sales_Contact_3 + Sales_Contact_4 + Sales_Contact_5',data=data).fit()
-print(results.summary())
-
-df = pd.read_html(results.summary().tables[1].as_html(),header=0,index_col=0)[0]
-
-df=df.reset_index()
-df=df[df['P>|t|']<0.05][['index','coef']]
-df
-
-consolidated_summary=pd.DataFrame()
-for acctype in list(set(list(data['Client_Type']))):
-  temp_data = data[data['Client_Type']==acctype].copy()
-  results = smf.ols('Amount_Collected ~ Campaign_Email + Campaign_Flyer + Campaign_Phone + Sales_Contact_1 + Sales_Contact_2 + Sales_Contact_3 + Sales_Contact_4 + Sales_Contact_5',data=temp_data).fit()
-  df = pd.read_html(results.summary().tables[1].as_html(),header=0,index_col=0)[0].reset_index()
-  df=df[df['P>|t|']<0.05][['index','coef']]
-  df.columns=['Variable','Coefficient (Impact)']
-  df['Account Type']=acctype
-  df=df.sort_values('Coefficient (Impact)',ascending=False)
-  df=df[df['Variable']!='Intercept']
-  print(acctype)
-  consolidated_summary = consolidated_summary.append(df)
-  print(df)
-  #print(results.summary())
-
+#Regression Analysis (Broken by account type)
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 consolidated_summary=pd.DataFrame()
@@ -109,15 +70,7 @@ for acctype in list(set(list(data['Client_Type']))):
   consolidated_summary = consolidated_summary.append(df)
   print(results.summary())
 
-consolidated_summary
-
-consolidated_summary.reset_index(inplace=True)
-consolidated_summary.drop('index',inplace=True,axis=1)
-
-consolidated_summary.columns=['Variable','ROI','Account Type']
-consolidated_summary['ROI'] = consolidated_summary['ROI'].apply(lambda x: round(x,1))
-consolidated_summary.style.background_gradient(cmap='RdYlGn')
-
+#Final view & Data Storage
 import seaborn as sns
 import matplotlib.pyplot as plt
 
